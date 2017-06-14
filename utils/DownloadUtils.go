@@ -15,6 +15,9 @@ func DownloadURL(url string, file string) bool {
 	fmt.Printf("Downloading %v...\n", req.URL())
 	resp := client.Do(req)
 	fmt.Printf("  %v\n", resp.HTTPResponse.Status)
+	if(resp.Size == 0){
+		return false
+	}
 
 	// start UI loop
 	t := time.NewTicker(500 * time.Millisecond)

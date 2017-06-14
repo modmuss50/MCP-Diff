@@ -4,17 +4,21 @@ import (
 	"github.com/modmuss50/MCP-Diff/utils"
 	"github.com/modmuss50/MCP-Diff/mcp"
 	"strings"
+	"errors"
 )
 
 
-func GetMCPDiff(oldMCP string, newMCP string) string {
+func GetMCPDiff(oldMCP string, newMCP string) (string, error) {
 	oldMCP = "mcp_snapshot-" + oldMCP
 	newMCP = "mcp_snapshot-" + newMCP
 
 	dataDir := "data"
-	if !utils.FileExists(dataDir){
-		utils.MakeDir(dataDir)
+
+	if(utils.FileExists(dataDir)){
+		utils.DeleteDir(dataDir)
 	}
+
+	utils.MakeDir(dataDir)
 
 	oldMCPFile := dataDir + "/" + oldMCP + ".zip"
 	newMCPFile := dataDir + "/" + newMCP + ".zip"
@@ -22,7 +26,7 @@ func GetMCPDiff(oldMCP string, newMCP string) string {
 	if !utils.FileExists(oldMCPFile){
 		urlSub := strings.Replace(oldMCP, "-", "/", 1) + "/"
 		if ! utils.DownloadURL("http://export.mcpbot.bspk.rs/" + urlSub + oldMCP + ".zip", oldMCPFile) {
-			return "Failed to download old MCP export"
+			return "", errors.New("Failed to download old MCP export")
 		}
 
 	}
@@ -30,16 +34,24 @@ func GetMCPDiff(oldMCP string, newMCP string) string {
 	if !utils.FileExists(newMCPFile){
 		urlSub := strings.Replace(newMCP, "-", "//", 1) + "/"
 		if ! utils.DownloadURL("http://export.mcpbot.bspk.rs/" + urlSub + newMCP + ".zip", newMCPFile){
-			return "Failed to download new MCP export"
+			return "", errors.New("Failed to download new MCP export")
 		}
 
 	}
-
-	utils.ExtractZip(oldMCPFile, dataDir + "/" + oldMCP)
-	utils.ExtractZip(newMCPFile,dataDir + "/" + newMCP)
-
 	oldMCPDir := dataDir + "/" + oldMCP
 	newMCPDir := dataDir + "/" + newMCP
+
+	utils.ExtractZip(oldMCPFile, oldMCPDir)
+	utils.ExtractZip(newMCPFile, newMCPDir)
+
+	if !utils.FileExists(oldMCPDir){
+		return  "", errors.New("Failed to extract old MCP export, is that a correct mcp name?")
+	}
+
+	if !utils.FileExists(newMCPDir){
+		return "", errors.New("Failed to extract old MCP export, is that a correct mcp name?")
+	}
+
 
 	oldFields := mcp.LoadFields(utils.ReadLinesFromFile(oldMCPDir + "/" + "fields.csv"))
 	newFields := mcp.LoadFields(utils.ReadLinesFromFile(newMCPDir + "/" + "fields.csv"))
@@ -68,5 +80,5 @@ func GetMCPDiff(oldMCP string, newMCP string) string {
 			response += "Added Method: " + method.Name + " srg: " + method.Searge + "\n"
 		}
 	}
-	return response
+	return response, nil
 }
