@@ -2,7 +2,6 @@ package utils
 
 import (
 	"fmt"
-	"os"
 	"time"
 	"github.com/cavaliercoder/grab"
 )
