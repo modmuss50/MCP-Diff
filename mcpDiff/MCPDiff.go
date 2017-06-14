@@ -4,7 +4,6 @@ import (
 	"github.com/modmuss50/MCP-Diff/utils"
 	"github.com/modmuss50/MCP-Diff/mcp"
 	"strings"
-	"bytes"
 )
 
 
@@ -45,15 +44,15 @@ func GetMCPDiff(oldMCP string, newMCP string) string {
 	oldFields := mcp.LoadFields(utils.ReadLinesFromFile(oldMCPDir + "/" + "fields.csv"))
 	newFields := mcp.LoadFields(utils.ReadLinesFromFile(newMCPDir + "/" + "fields.csv"))
 
-	var buffer bytes.Buffer
+	response := ""
 
 	for _, field := range newFields {
 		if value, ok := oldFields[field.Searge]; ok {
 			if value.Name != field.Name{
-				buffer.WriteString("Changed Field: " + value.Name + " from " + field.Name + "\n")
+				response += "Changed Field: " + value.Name + " from " + field.Name + "\n"
 			}
 		} else {
-			buffer.WriteString("Added Field: " + field.Name + " srg: " + field.Searge + "\n")
+			response += "Added Field: " + field.Name + " srg: " + field.Searge + "\n"
 		}
 	}
 
@@ -63,11 +62,11 @@ func GetMCPDiff(oldMCP string, newMCP string) string {
 	for _, method := range newMethods {
 		if value, ok := oldMethods[method.Searge]; ok {
 			if value.Name != method.Name{
-				buffer.WriteString("Changed Method: " + value.Name + " from " + method.Name + "\n")
+				response += "Changed Method: " + value.Name + " from " + method.Name + "\n"
 			}
 		} else {
-			buffer.WriteString("Added Method: " + method.Name + " srg: " + method.Searge + "\n")
+			response += "Added Method: " + method.Name + " srg: " + method.Searge + "\n"
 		}
 	}
-	return buffer.String()
+	return response
 }
