@@ -1,0 +1,12 @@
+# Ignore everything
+/*
+
+!/main.go
+!/.gitignore
+!/README.md
+!/utils/
+!/mcp/
+!/build.gradle
+!/gradlew
+!/gradlew.bat
+!/gradle/
