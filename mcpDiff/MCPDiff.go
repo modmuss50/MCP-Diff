@@ -5,7 +5,12 @@ import (
 	"github.com/modmuss50/MCP-Diff/mcp"
 	"strings"
 	"errors"
+	"github.com/patrickmn/go-cache"
+	"time"
+	"fmt"
 )
+
+var lookupCache = cache.New(10*time.Minute, 10*time.Minute)
 
 func GetMCPDiff(oldMCP string, newMCP string) (string, error) {
 	if strings.Contains(oldMCP, "stable-"){
@@ -89,4 +94,54 @@ func GetMCPDiff(oldMCP string, newMCP string) (string, error) {
 		}
 	}
 	return response, nil
+}
+
+func LookupMethod(input string) string {
+	methodURL := "http://export.mcpbot.bspk.rs/methods.csv"
+	methodCSV := "data/methods.csv"
+	utils.DownloadURL(methodURL, methodCSV)
+
+	var methods map[string]mcp.Method
+
+	mcache, found := lookupCache.Get("methods")
+	if found {
+		methods = mcache.(map[string]mcp.Method)
+		fmt.Println("Using cache")
+	} else {
+		methods = mcp.LoadMethods(utils.ReadLinesFromFile(methodCSV))
+		lookupCache.Set("methods", methods, cache.DefaultExpiration)
+		fmt.Println("Adding to cache")
+	}
+
+	for _,method := range methods {
+		if(input == method.Name || input == method.Searge){
+			return "Method: SRG=`" + method.Searge + "`	Name=`" + method.Name +"` 	Description=`" + method.Desc + "`"
+		}
+	}
+	return "Failed to find method"
+}
+
+func LookupField(input string) string {
+	fieldURL := "http://export.mcpbot.bspk.rs/fields.csv"
+	fieldCSV := "data/fields.csv"
+	utils.DownloadURL(fieldURL, fieldCSV)
+
+	var fields map[string]mcp.Field
+
+	mcache, found := lookupCache.Get("fields")
+	if found {
+		fields = mcache.(map[string]mcp.Field)
+		fmt.Println("Using cache")
+	} else {
+		fields = mcp.LoadFields(utils.ReadLinesFromFile(fieldCSV))
+		lookupCache.Set("fields", fields, cache.DefaultExpiration)
+		fmt.Println("Adding to cache")
+	}
+
+	for _,field := range fields {
+		if(input == field.Name || input == field.Searge){
+			return "Field: SRG=`" + field.Searge + "`	Name=`" + field.Name +"` 	Description=`" + field.Desc + "`"
+		}
+	}
+	return "Failed to find Field"
 }
