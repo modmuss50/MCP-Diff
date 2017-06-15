@@ -8,11 +8,12 @@ import (
 	"github.com/patrickmn/go-cache"
 	"time"
 	"fmt"
+	"strconv"
 )
 
 var lookupCache = cache.New(10*time.Minute, 10*time.Minute)
 
-func GetMCPDiff(oldMCP string, newMCP string) (string, error) {
+func GetMCPDiff(oldMCP string, newMCP string) (string, string,  error) {
 	if strings.Contains(oldMCP, "stable-"){
 		oldMCP = "mcp_" + oldMCP
 	} else {
@@ -39,7 +40,7 @@ func GetMCPDiff(oldMCP string, newMCP string) (string, error) {
 	if !utils.FileExists(oldMCPFile){
 		urlSub := strings.Replace(oldMCP, "-", "/", 1) + "/"
 		if ! utils.DownloadURL("http://export.mcpbot.bspk.rs/" + urlSub + oldMCP + ".zip", oldMCPFile) {
-			return "", errors.New("Failed to download old MCP export")
+			return "","", errors.New("Failed to download old MCP export")
 		}
 
 	}
@@ -47,7 +48,7 @@ func GetMCPDiff(oldMCP string, newMCP string) (string, error) {
 	if !utils.FileExists(newMCPFile){
 		urlSub := strings.Replace(newMCP, "-", "//", 1) + "/"
 		if ! utils.DownloadURL("http://export.mcpbot.bspk.rs/" + urlSub + newMCP + ".zip", newMCPFile){
-			return "", errors.New("Failed to download new MCP export")
+			return "","",  errors.New("Failed to download new MCP export")
 		}
 
 	}
@@ -58,11 +59,11 @@ func GetMCPDiff(oldMCP string, newMCP string) (string, error) {
 	utils.ExtractZip(newMCPFile, newMCPDir)
 
 	if !utils.FileExists(oldMCPDir){
-		return  "", errors.New("Failed to extract old MCP export, is that a correct mcp name?")
+		return  "","",  errors.New("Failed to extract old MCP export, is that a correct mcp name?")
 	}
 
 	if !utils.FileExists(newMCPDir){
-		return "", errors.New("Failed to extract old MCP export, is that a correct mcp name?")
+		return "","",  errors.New("Failed to extract old MCP export, is that a correct mcp name?")
 	}
 
 
@@ -71,13 +72,27 @@ func GetMCPDiff(oldMCP string, newMCP string) (string, error) {
 
 	response := ""
 
+	changed := 0
+	added := 0
+	lost := 0
+
 	for _, field := range newFields {
 		if value, ok := oldFields[field.Searge]; ok {
 			if value.Name != field.Name{
 				response += "Changed Field: " + value.Name + " from " + field.Name + "\n"
+				changed++
 			}
 		} else {
 			response += "Added Field: " + field.Name + " srg: " + field.Searge + "\n"
+			added++
+		}
+	}
+	for _, field := range oldFields {
+		if _, ok := newFields[field.Searge]; ok {
+			//nope
+		} else {
+			response += "Lost Field: " + field.Name + " srg: " + field.Searge + "\n"
+			lost++
 		}
 	}
 
@@ -88,12 +103,22 @@ func GetMCPDiff(oldMCP string, newMCP string) (string, error) {
 		if value, ok := oldMethods[method.Searge]; ok {
 			if value.Name != method.Name{
 				response += "Changed Method: " + value.Name + " from " + method.Name + "\n"
+				changed++
 			}
 		} else {
 			response += "Added Method: " + method.Name + " srg: " + method.Searge + "\n"
+			added++
 		}
 	}
-	return response, nil
+	for _, method := range oldMethods {
+		if _, ok := newMethods[method.Searge]; ok {
+			//nope
+		} else {
+			response += "Lost Method: " + method.Name + " srg: " + method.Searge + "\n"
+			lost++
+		}
+	}
+	return response, "Added: " + strconv.Itoa(added) + " Changed: " + strconv.Itoa(changed) + " Lost: " + strconv.Itoa(lost),  nil
 }
 
 func LookupMethod(input string) string {
