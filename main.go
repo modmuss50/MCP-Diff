@@ -6,6 +6,6 @@ import (
 )
 
 func main(){
-	fmt.Print(mcpDiff.GetMCPDiff("20170613-1.12", "20170614-1.12"))
+	fmt.Print(mcpDiff.GetMCPDiff("stable-29-1.10.2", "stable-32-1.11"))
 }
 

@@ -7,10 +7,18 @@ import (
 	"errors"
 )
 
-
 func GetMCPDiff(oldMCP string, newMCP string) (string, error) {
-	oldMCP = "mcp_snapshot-" + oldMCP
-	newMCP = "mcp_snapshot-" + newMCP
+	if strings.Contains(oldMCP, "stable-"){
+		oldMCP = "mcp_" + oldMCP
+	} else {
+		oldMCP = "mcp_snapshot-" + oldMCP
+	}
+
+	if strings.Contains(newMCP, "stable-"){
+		newMCP = "mcp_" + newMCP
+	} else {
+		newMCP = "mcp_snapshot-" + newMCP
+	}
 
 	dataDir := "data"
 
