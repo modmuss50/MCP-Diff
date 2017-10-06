@@ -9,49 +9,24 @@ import (
 	"time"
 	"fmt"
 	"strconv"
+	"github.com/jmoiron/jsonq"
 )
 
 var lookupCache = cache.New(10*time.Minute, 10*time.Minute)
 
 func GetMCPDiff(oldMCP string, newMCP string) (string, string,  error) {
-	if strings.Contains(oldMCP, "stable-"){
-		oldMCP = "mcp_" + oldMCP
-	} else {
-		oldMCP = "mcp_snapshot-" + oldMCP
-	}
-
-	if strings.Contains(newMCP, "stable-"){
-		newMCP = "mcp_" + newMCP
-	} else {
-		newMCP = "mcp_snapshot-" + newMCP
-	}
+	oldMCP = ParseMCPString(oldMCP)
+	newMCP = ParseMCPString(newMCP)
 
 	dataDir := "data"
-
-	if(utils.FileExists(dataDir)){
-		utils.DeleteDir(dataDir)
-	}
-
 	utils.MakeDir(dataDir)
 
 	oldMCPFile := dataDir + "/" + oldMCP + ".zip"
 	newMCPFile := dataDir + "/" + newMCP + ".zip"
 
-	if !utils.FileExists(oldMCPFile){
-		urlSub := strings.Replace(oldMCP, "-", "/", 1) + "/"
-		if ! utils.DownloadURL("http://export.mcpbot.bspk.rs/" + urlSub + oldMCP + ".zip", oldMCPFile) {
-			return "","", errors.New("Failed to download old MCP export")
-		}
+	DownloadExport(oldMCP)
+	DownloadExport(newMCP)
 
-	}
-
-	if !utils.FileExists(newMCPFile){
-		urlSub := strings.Replace(newMCP, "-", "//", 1) + "/"
-		if ! utils.DownloadURL("http://export.mcpbot.bspk.rs/" + urlSub + newMCP + ".zip", newMCPFile){
-			return "","",  errors.New("Failed to download new MCP export")
-		}
-
-	}
 	oldMCPDir := dataDir + "/" + oldMCP
 	newMCPDir := dataDir + "/" + newMCP
 
@@ -140,7 +115,7 @@ func LookupMethod(input string) string {
 
 	for _,method := range methods {
 		if(input == method.Name || input == method.Searge){
-			return "Method: SRG=`" + method.Searge + "`	Name=`" + method.Name +"` 	Description=`" + method.Desc + "`"
+			return "Method: SRG=`" + method.Searge + "`	Name=`" + method.Name +"` Description=`" + method.Desc + "`"
 		}
 	}
 	return "Failed to find method"
@@ -169,4 +144,80 @@ func LookupField(input string) string {
 		}
 	}
 	return "Failed to find Field"
+}
+
+func GetLatestSnapshot(mcVersion string) (string, error){
+	versionsURL := "http://export.mcpbot.bspk.rs/versions.json"
+	versionsJSON, err := utils.DownloadString(versionsURL)
+	if err != nil{
+		return "", err
+	}
+	list, err := utils.GetQuery(versionsJSON).ArrayOfInts(mcVersion, "snapshot")
+	return strconv.Itoa(list[0]), nil
+}
+
+func DownloadExport(mcpVersion string) (error){
+	utils.MakeDir("data")
+	MCPFile := "data/" + mcpVersion + ".zip"
+	if !utils.FileExists(MCPFile){
+		urlSub := strings.Replace(mcpVersion, "-", "//", 1) + "/"
+		if ! utils.DownloadURL("http://export.mcpbot.bspk.rs/" + urlSub + mcpVersion + ".zip", MCPFile){
+			return errors.New("failed to download new MCP export")
+		}
+	}
+	return nil
+}
+
+func GetMCVersionFromExportDate(date string) (string, error){
+	versionsURL := "http://export.mcpbot.bspk.rs/versions.json"
+	versionsJSON, err := utils.DownloadString(versionsURL)
+	if err != nil{
+		return "", err
+	}
+	data := utils.GetDataMap(versionsJSON)
+	for i, element := range data {
+		jq := jsonq.NewQuery(element)
+		arr, _ := jq.ArrayOfInts("snapshot")
+		intD, _ := strconv.Atoi(date)
+		if intArrayContains(arr, intD){
+			return i, nil
+		}
+	}
+	return "", nil
+}
+
+func intArrayContains(s []int, e int) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+
+func isInt(s string) bool {
+	_, err := strconv.Atoi(s)
+	return err == nil
+}
+
+func ParseMCPString(input string) (string){
+	if strings.Contains(input, ".") && isInt(strings.Replace(input, ".", "", -1)) { //Lets assume this is a mc version string
+		str, err := GetLatestSnapshot(input)
+		if err == nil {
+			return "mcp_snapshot-" + str + "-" + input
+		}
+		println(err)
+	}
+	if len(input) == 8 && isInt(input){ // Guessing this is a snapshot date
+		str, err := GetMCVersionFromExportDate(input)
+		if err == nil {
+			return "mcp_snapshot-" + input + "-" + str
+		}
+		println(err)
+	}
+	if strings.Contains(input, "stable-"){
+		return "mcp_" + input
+	} else {
+		return "mcp_snapshot-" + input
+	}
 }
