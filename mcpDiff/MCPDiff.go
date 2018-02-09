@@ -54,7 +54,7 @@ func GetMCPDiff(oldMCP string, newMCP string) (string, string,  error) {
 	for _, field := range newFields {
 		if value, ok := oldFields[field.Searge]; ok {
 			if value.Name != field.Name{
-				response += "Changed Field: " + field.Name + " -> " + value.Name  + "\n"
+				response += "Changed Field: " + value.Name + " -> " + field.Name  + "\n"
 				changed++
 			}
 		} else {
@@ -77,7 +77,7 @@ func GetMCPDiff(oldMCP string, newMCP string) (string, string,  error) {
 	for _, method := range newMethods {
 		if value, ok := oldMethods[method.Searge]; ok {
 			if value.Name != method.Name{
-				response += "Changed Method: " + method.Name + " -> " + value.Name + "\n"
+				response += "Changed Method: " + field.Name + " -> " + method.Name + "\n"
 				changed++
 			}
 		} else {
