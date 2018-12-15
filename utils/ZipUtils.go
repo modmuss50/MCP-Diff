@@ -7,5 +7,5 @@ import (
 
 func ExtractZip(zip string, dest string){
 	fmt.Println("Extracting " + zip)
-	archiver.Zip.Open(zip, dest)
+	archiver.DefaultZip.Unarchive(zip, dest)
 }
